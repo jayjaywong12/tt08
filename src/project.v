@@ -24,7 +24,7 @@ module tt_um_jayjaywong12 (
   localparam OUTPUT_SIZE = 2;
 
   // Does not reset with rst_n
-  reg [WORD_SIZE_BITS * (INSTRUCT_SIZE + (NUM_VECTORS * MAX_VECTOR_SIZE) + OUTPUT_SIZE) - 1:0] mem;
+  reg [WORD_SIZE_BITS - 1:0] mem [INSTRUCT_SIZE + (NUM_VECTORS * MAX_VECTOR_SIZE) + OUTPUT_SIZE];
   
   localparam INSTRUCT_OFFSET = 0;
   localparam VECTOR_OFFSET = INSTRUCT_OFFSET + INSTRUCT_SIZE;
@@ -37,6 +37,7 @@ module tt_um_jayjaywong12 (
   localparam [1:0] STATE_RESET = 2'h0;
   localparam [1:0] STATE_RUNNING = 2'h1;
   localparam [1:0] STATE_DONE = 2'h2;
+  localparam [1:0] STATE_ACCUMULATING = 2'h3;
 
   reg [1:0] state;
   wire [1:0] op = ui_in[7:6];
@@ -46,13 +47,17 @@ module tt_um_jayjaywong12 (
     if (rst_n) begin
       if (state == STATE_RESET && op == OPCODE_RUN) begin
         state <= STATE_RUNNING;
+      end else if (state == STATE_RUNNING) begin
+        state <= STATE_ACCUMULATING;
+      end else if (state == STATE_ACCUMULATING) begin
+        state <= STATE_DONE;
       end
     end else begin
       state <= STATE_RESET;
     end
   end
 
-  assign uo_out[7:0] = mem[OUTPUT_OFFSET * OUTPUT_SIZE * WORD_SIZE_BITS - 1: OUTPUT_OFFSET];
+  assign uo_out[7:0] = {mem[OUTPUT_OFFSET + 1], mem[OUTPUT_OFFSET]};
 
   // State is always output
   assign uio_out[5:4] = state[1:0];
@@ -64,13 +69,47 @@ module tt_um_jayjaywong12 (
   wire read_operation = op == OPCODE_READ;
   // Read operation, use bidir pins as outputs
   assign uio_oe[3:0] = {4{read_operation}};
-  wire [7:0] word_addr = {addr, 2'b00};
-  assign uio_out[3:0] = mem[word_addr+:8];
+  assign uio_out[3:0] = mem[addr];
   wire write_operation = op == OPCODE_WRITE;
 
+  reg [2 * WORD_SIZE_BITS - 1:0] products[MAX_VECTOR_SIZE];
+  wire  vector_length_mask[MAX_VECTOR_SIZE - 1:0];
+  wire [3:0] vector_length = mem[0];
+
+  // This is a TON of combinational logic, hope it fits in a clock cycle...
+  genvar i;
+  generate
+    for (i = 0; i < MAX_VECTOR_SIZE; i = i + 1) begin
+      assign vector_length_mask[i] = (vector_length == 0) || vector_length > i;
+      always @(posedge clk) begin
+        if (rst_n) begin
+          if (state == STATE_RUNNING && vector_length_mask[i]) begin
+            products[i] <= (mem[INSTRUCT_OFFSET + i] *
+              mem[INSTRUCT_OFFSET + i + MAX_VECTOR_SIZE]);
+          end else begin 
+            products[i] <= 0;
+          end
+        end else begin
+          products[i] <= 0;
+        end
+      end
+    end
+  endgenerate
+
+  reg [2 * WORD_SIZE_BITS - 1:0] sum;
+  integer j;
   always @(posedge clk) begin
-    if (write_operation) begin
-      mem[word_addr+:8] = uio_in[3:0];
+    if (rst_n) begin
+      if (state == STATE_ACCUMULATING) begin
+        sum = uo_out;
+        for (j = 0; j < MAX_VECTOR_SIZE; j = j + 1) begin
+          sum = sum + products[j];
+        end
+        mem[OUTPUT_OFFSET] = sum[3:0];
+        mem[OUTPUT_OFFSET + 1] = sum[7:4];
+      end else if (write_operation) begin
+        mem[addr] <= uio_in[3:0];
+      end
     end
   end
 
