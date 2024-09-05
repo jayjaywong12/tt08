@@ -9,12 +9,15 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-Explain how your project works (it currently doesn't)
+Words are 4 bits wide.
+Write the length of the 4-bit vectors you want to multiply into address 0.
+The vectors should be in words 1-32. Word 1 will be multiplied by word 17, etc.
+The result will be accumulated into words 33-34 (8 bits).
 
 ## How to test
 
-Explain how to use your project
+Use it to multiply vectors I guess.
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+Will be programmed by RP2040. No other external hardware.
