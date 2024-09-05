@@ -46,10 +46,6 @@ module tt_um_jayjaywong12 (
     if (rst_n) begin
       if (state == STATE_RESET && op == OPCODE_RUN) begin
         state <= STATE_RUNNING;
-      end else if (op == OPCODE_READ) begin
-        state <= STATE_RESET;
-      end else if (op == OPCODE_WRITE) begin
-        state <= STATE_RESET;
       end
     end else begin
       state <= STATE_RESET;
@@ -67,7 +63,7 @@ module tt_um_jayjaywong12 (
 
   wire read_operation = op == OPCODE_READ;
   // Read operation, use bidir pins as outputs
-  assign uio_oe[3:0] = read_operation;
+  assign uio_oe[3:0] = {4{read_operation}};
   wire [7:0] word_addr = {addr, 2'b00};
   assign uio_out[3:0] = mem[word_addr+:8];
   wire write_operation = op == OPCODE_WRITE;
