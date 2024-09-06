@@ -10,6 +10,14 @@ module tb ();
   initial begin
     $dumpfile("tb.vcd");
     $dumpvars(0, tb);
+    /* Does not work with gate level sim */
+    /*
+    for (int i = 0; i < 35; i=i+1) $dumpvars(0, user_project.mem[i]);
+    for (int i = 0; i < 16; i=i+1) $dumpvars(0, user_project.products[i]);
+    for (int i = 0; i < 8; i=i+1) $dumpvars(0, user_project.sum1[i]);
+    for (int i = 0; i < 4; i=i+1) $dumpvars(0, user_project.sum2[i]);
+    for (int i = 0; i < 2; i=i+1) $dumpvars(0, user_project.sum3[i]);
+    */
     #1;
   end
 

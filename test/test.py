@@ -4,6 +4,7 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
+import random
 from random import randint
 
 OP_READ = 0
@@ -61,12 +62,12 @@ async def set_vec(dut, vec, vec_idx):
         await set_value_at(dut, 1 + i + vec_idx * 16, vec[i])
 
 set_vec1 = lambda dut, vec: set_vec(dut, vec, 0)
-set_vec2 = lambda dut, vec: set_vec(dut, vec, 0)
+set_vec2 = lambda dut, vec: set_vec(dut, vec, 1)
 
 async def set_acc(dut, val):
     assert val < 256
     await set_value_at(dut, 1 + 16 * 2, val & 0xF)
-    await set_value_at(dut, 1 + 16 * 2 + 1, (val & 0xF0) >> 8)
+    await set_value_at(dut, 1 + 16 * 2 + 1, (val & 0xF0) >> 4)
 
 def get_state(dut):
     return (dut.uio_out.value & (UIO_STATE_MASK << UIO_STATE_SHIFT)) >> UIO_STATE_SHIFT 
@@ -108,21 +109,7 @@ async def test_mem(dut):
     # Set the input values you want to test
     for addr in range(0, 32):
         for test_value in range(0,16):
-            # Write the value
-            op = OP_WRITE
-            dut.ui_in.value = addr | op << OP_SHIFT
-            dut.uio_in.value = test_value
-
-            await ClockCycles(dut.clk, 1)
-
-            # Read the value back
-            op = OP_READ
-            dut.ui_in.value = addr | op << OP_SHIFT
-            
-            await ClockCycles(dut.clk, 1)
-
-            assert (dut.uio_oe.value & UIO_DATA_MASK) == 0xF
-            assert (dut.uio_out.value & UIO_DATA_MASK) == test_value
+            await set_value_at(dut, addr, test_value, check=True)
 
 @cocotb.test()
 async def test_sm(dut):
@@ -181,6 +168,7 @@ async def test_out(dut):
     value = randint(0, 255)
     dut._log.info(f"{value=}")
     await set_acc(dut, value)
+    await ClockCycles(dut.clk, 1)
     assert get_value(dut) == value
 
 
@@ -206,15 +194,20 @@ async def test_vadd(dut):
 
     # 100 random iterations
     for _ in range(1):
-        veclength = randint(0, 15)
-        vec1 = generate_random_vec()
-        vec2 = generate_random_vec()
-        orig_acc = randint(0,(2**8)-1)
-        await set_veclength(dut, veclength)
-        await set_vec1(dut, vec1)
-        await set_vec2(dut, vec2)
-        await set_acc(dut, orig_acc)
-        output = await run(dut)
-        expected = calculate_expected(veclength, vec1, vec2, orig_acc)
-        dut._log.info(f"{veclength=} {vec1=} {vec2=} {expected=}")
-        assert output == expected
+        for veclength in range(15):
+            # Reset between runs
+            dut.rst_n.value = 0
+            await ClockCycles(dut.clk, 1)
+            dut.rst_n.value = 1
+
+            vec1 = generate_random_vec()
+            vec2 = generate_random_vec()
+            orig_acc = randint(0,(2**8)-1)
+            await set_veclength(dut, veclength)
+            await set_vec1(dut, vec1)
+            await set_vec2(dut, vec2)
+            await set_acc(dut, orig_acc)
+            output = await run(dut)
+            expected = calculate_expected(veclength, vec1, vec2, orig_acc)
+            dut._log.info(f"{veclength=} {vec1=} {vec2=} {expected=} {orig_acc=}")
+            assert output == expected

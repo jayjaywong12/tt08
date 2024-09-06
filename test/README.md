@@ -16,7 +16,7 @@ To run the RTL simulation:
 make -B
 ```
 
-To run gatelevel simulation, first harden your project and copy `../runs/wokwi/results/final/verilog/gl/{your_module_name}.v` to `gate_level_netlist.v`.
+To run gatelevel simulation, first harden your project and copy `../runs/wokwi/final/pnl/{your_module_name}.pnl.v` to `gate_level_netlist.v`.
 
 Then run:
 
