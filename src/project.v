@@ -100,29 +100,15 @@ module tt_um_jayjaywong12 (
   endgenerate
 
   // A truly unneeded amount of combinational logic
-  wire [2 * WORD_SIZE_BITS - 1:0] sum1[8];
-  wire [2 * WORD_SIZE_BITS - 1:0] sum2[4];
-  wire [2 * WORD_SIZE_BITS - 1:0] sum3[2];
+  wire [2 * WORD_SIZE_BITS - 1:0] sum1[4];
   wire [2 * WORD_SIZE_BITS - 1:0] sum4;
 
-  assign sum1[0] = products[0] + products[1] + prev_acc;
-  assign sum1[1] = products[2] + products[3];
-  assign sum1[2] = products[4] + products[5];
-  assign sum1[3] = products[6] + products[7];
-  assign sum1[4] = products[8] + products[9];
-  assign sum1[5] = products[10] + products[11];
-  assign sum1[6] = products[12] + products[13];
-  assign sum1[7] = products[14] + products[15];
+  assign sum1[0] = products[0] + products[1] + prev_acc + products[2] + products[3];
+  assign sum1[1] = products[4] + products[5] + products[6] + products[7];
+  assign sum1[2] = products[8] + products[9] + products[10] + products[11];
+  assign sum1[3] = products[12] + products[13] + products[14] + products[15];
 
-  assign sum2[0] = sum1[0] + sum1[1];
-  assign sum2[1] = sum1[2] + sum1[3];
-  assign sum2[2] = sum1[4] + sum1[5];
-  assign sum2[3] = sum1[6] + sum1[7];
-
-  assign sum3[0] = sum2[0] + sum2[1];
-  assign sum3[1] = sum2[2] + sum2[3];
-  
-  assign sum4 = sum3[0] + sum3[1];
+  assign sum4 = sum1[0] + sum1[1] + sum1[2] + sum1[3];
 
   always @(posedge clk) begin
     if (rst_n) begin
